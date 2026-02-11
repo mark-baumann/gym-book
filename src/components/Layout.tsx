@@ -1,13 +1,11 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Dumbbell, ClipboardList, Play, BarChart3, CalendarDays } from "lucide-react";
+import { Dumbbell, ClipboardList, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/", icon: Dumbbell, label: "Übungen" },
   { to: "/plans", icon: ClipboardList, label: "Pläne" },
-  { to: "/workout", icon: Play, label: "Training" },
-  { to: "/stats", icon: BarChart3, label: "Statistik" },
   { to: "/calendar", icon: CalendarDays, label: "Kalender" },
 ];
 
@@ -20,7 +18,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="mx-auto max-w-3xl px-4 py-3">
           <h1 className="text-lg font-bold tracking-tight flex items-center gap-2">
             <Dumbbell className="h-5 w-5 text-primary" />
-            GymTracker
+            Gym Book
           </h1>
         </div>
       </header>
