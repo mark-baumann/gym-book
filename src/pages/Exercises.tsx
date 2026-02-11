@@ -1,7 +1,5 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,10 +15,7 @@ import { MUSCLE_GROUPS } from "@/lib/constants";
 import Layout from "@/components/Layout";
 
 type ExerciseStats = {
-  sessions: number;
   bestWeight: number;
-  totalVolume: number;
-  lastTrained: string | null;
 };
 
 export default function Exercises() {
@@ -32,6 +27,8 @@ export default function Exercises() {
   const [muscleGroup, setMuscleGroup] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null);
+  const [weightInput, setWeightInput] = useState("");
 
   const { data: exercises, isLoading } = useQuery({
     queryKey: ["exercises"],
@@ -58,38 +55,44 @@ export default function Exercises() {
 
     workoutSets?.forEach((set: any) => {
       const exerciseId = set.exercise_id;
-      const sessionDate = set.workout_sessions?.date ?? null;
       if (!stats[exerciseId]) {
         stats[exerciseId] = {
-          sessions: 0,
           bestWeight: 0,
-          totalVolume: 0,
-          lastTrained: null,
         };
       }
 
       stats[exerciseId].bestWeight = Math.max(stats[exerciseId].bestWeight, Number(set.weight_kg || 0));
-      stats[exerciseId].totalVolume += Number(set.weight_kg || 0) * Number(set.reps || 0);
-
-      if (sessionDate) {
-        if (!stats[exerciseId].lastTrained || sessionDate > stats[exerciseId].lastTrained) {
-          stats[exerciseId].lastTrained = sessionDate;
-        }
-      }
-    });
-
-    const sessionsByExercise: Record<string, Set<string>> = {};
-    workoutSets?.forEach((set) => {
-      sessionsByExercise[set.exercise_id] = sessionsByExercise[set.exercise_id] || new Set();
-      sessionsByExercise[set.exercise_id].add(set.workout_session_id);
-    });
-
-    Object.keys(sessionsByExercise).forEach((exerciseId) => {
-      stats[exerciseId].sessions = sessionsByExercise[exerciseId].size;
     });
 
     return stats;
   }, [workoutSets]);
+
+  const quickLogMutation = useMutation({
+    mutationFn: async ({ exerciseId, weightKg }: { exerciseId: string; weightKg: number }) => {
+      const { data: session, error: sessionError } = await supabase
+        .from("workout_sessions")
+        .insert({ training_plan_id: null })
+        .select("id")
+        .single();
+      if (sessionError) throw sessionError;
+
+      const { error: setError } = await supabase.from("workout_sets").insert({
+        workout_session_id: session.id,
+        exercise_id: exerciseId,
+        set_number: 1,
+        weight_kg: weightKg,
+        reps: 1,
+      });
+      if (setError) throw setError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exercise-stats"] });
+      toast.success("Gewicht gespeichert");
+      setSelectedExercise(null);
+      setWeightInput("");
+    },
+    onError: () => toast.error("Fehler beim Speichern des Gewichts"),
+  });
 
   const uploadImage = async (file: File): Promise<string> => {
     const ext = file.name.split(".").pop();
@@ -163,6 +166,22 @@ export default function Exercises() {
     }
   };
 
+  const openWeightDialog = (exerciseId: string, exerciseName: string, bestWeight: number) => {
+    setSelectedExercise({ id: exerciseId, name: exerciseName });
+    setWeightInput(bestWeight > 0 ? String(bestWeight) : "");
+  };
+
+  const saveWeight = () => {
+    if (!selectedExercise) return;
+    const weightKg = Number(weightInput);
+    if (!weightKg || weightKg <= 0) {
+      toast.error("Bitte ein gültiges Gewicht eingeben");
+      return;
+    }
+
+    quickLogMutation.mutate({ exerciseId: selectedExercise.id, weightKg });
+  };
+
   const grouped = exercises?.reduce((acc, ex) => {
     (acc[ex.muscle_group] = acc[ex.muscle_group] || []).push(ex);
     return acc;
@@ -231,7 +250,11 @@ export default function Exercises() {
                 {exs?.map((ex) => {
                   const stats = statsByExercise[ex.id];
                   return (
-                    <Card key={ex.id} className="overflow-hidden">
+                    <Card
+                      key={ex.id}
+                      className="overflow-hidden cursor-pointer transition-shadow hover:shadow-md"
+                      onClick={() => openWeightDialog(ex.id, ex.name, stats?.bestWeight ?? 0)}
+                    >
                       {ex.image_url ? (
                         <img src={ex.image_url} alt={ex.name} className="h-40 w-full object-cover" />
                       ) : (
@@ -247,25 +270,18 @@ export default function Exercises() {
                             <Badge variant="secondary" className="mt-2">{ex.muscle_group}</Badge>
                           </div>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => startEdit(ex)}>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); startEdit(ex); }}>
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(ex.id)}>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(ex.id); }}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
                         </div>
 
                         <div className="mt-4 rounded-lg bg-muted/60 p-3 text-xs space-y-1">
-                          <p><span className="font-medium">Trainings:</span> {stats?.sessions ?? 0}</p>
                           <p><span className="font-medium">Bestes Gewicht:</span> {stats?.bestWeight ?? 0} kg</p>
-                          <p><span className="font-medium">Gesamtvolumen:</span> {Math.round(stats?.totalVolume ?? 0)} kg</p>
-                          <p>
-                            <span className="font-medium">Zuletzt:</span>{" "}
-                            {stats?.lastTrained
-                              ? format(new Date(stats.lastTrained), "dd.MM.yyyy", { locale: de })
-                              : "noch nie"}
-                          </p>
+                          <p className="text-muted-foreground">Tippe auf die Karte, um kg zu speichern.</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -276,6 +292,31 @@ export default function Exercises() {
           ))}
         </div>
       )}
+
+      <Dialog open={!!selectedExercise} onOpenChange={(openState) => { if (!openState) setSelectedExercise(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedExercise?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="weight-input">Gewicht in kg</Label>
+              <Input
+                id="weight-input"
+                type="number"
+                min="0"
+                step="0.5"
+                placeholder="z.B. 60"
+                value={weightInput}
+                onChange={(e) => setWeightInput(e.target.value)}
+              />
+            </div>
+            <Button onClick={saveWeight} disabled={quickLogMutation.isPending} className="w-full">
+              {quickLogMutation.isPending ? "Speichern..." : "Gewicht speichern"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
