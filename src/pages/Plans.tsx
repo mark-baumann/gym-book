@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, ClipboardList, GripVertical, Pencil, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, ClipboardList, GripVertical, Pencil, CheckCircle2, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
 
@@ -72,10 +72,14 @@ export default function Plans() {
   };
 
   const openEdit = (plan: NonNullable<typeof plans>[number]) => {
+    const orderedExercises = [...(plan.training_plan_exercises || [])]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((entry) => entry.exercise_id);
+
     setFormState({
       id: plan.id,
       name: plan.name,
-      selectedExercises: plan.training_plan_exercises?.map((entry) => entry.exercise_id) || [],
+      selectedExercises: orderedExercises,
     });
     setOpen(true);
   };
@@ -166,6 +170,20 @@ export default function Plans() {
     }));
   };
 
+  const moveExercise = (id: string, direction: "up" | "down") => {
+    setFormState((prev) => {
+      const currentIndex = prev.selectedExercises.indexOf(id);
+      if (currentIndex === -1) return prev;
+
+      const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+      if (targetIndex < 0 || targetIndex >= prev.selectedExercises.length) return prev;
+
+      const next = [...prev.selectedExercises];
+      [next[currentIndex], next[targetIndex]] = [next[targetIndex], next[currentIndex]];
+      return { ...prev, selectedExercises: next };
+    });
+  };
+
   return (
     <Layout>
       <div className="flex items-center justify-between mb-6">
@@ -205,6 +223,43 @@ export default function Plans() {
                   {!exercises?.length && <p className="text-sm text-muted-foreground">Erstelle zuerst Übungen</p>}
                 </div>
               </div>
+              {formState.selectedExercises.length > 0 && (
+                <div>
+                  <Label>Reihenfolge im Plan</Label>
+                  <div className="mt-2 space-y-2">
+                    {formState.selectedExercises.map((exerciseId, index) => {
+                      const exercise = exercises?.find((entry) => entry.id === exerciseId);
+                      if (!exercise) return null;
+
+                      return (
+                        <div key={exerciseId} className="flex items-center gap-2 rounded-lg border p-2">
+                          <GripVertical className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">{exercise.name}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">{exercise.muscle_group}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => moveExercise(exerciseId, "up")}
+                            disabled={index === 0}
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => moveExercise(exerciseId, "down")}
+                            disabled={index === formState.selectedExercises.length - 1}
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <Button onClick={() => saveMutation.mutate()} disabled={!formState.name || saveMutation.isPending} className="w-full">
                 {formState.id ? "Änderungen speichern" : "Erstellen"}
               </Button>
