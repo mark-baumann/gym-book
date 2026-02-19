@@ -15,10 +15,11 @@ import { MUSCLE_GROUPS } from "@/lib/constants";
 import Layout from "@/components/Layout";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
-import { useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 export default function Exercises() {
   const queryClient = useQueryClient();
+  const { exerciseId: routeExerciseId } = useParams<{ exerciseId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -212,7 +213,7 @@ export default function Exercises() {
   useEffect(() => {
     if (!exercises?.length) return;
 
-    const targetExerciseId = searchParams.get("exerciseId");
+    const targetExerciseId = routeExerciseId ?? searchParams.get("exerciseId");
     if (!targetExerciseId) return;
 
     const targetElement = document.getElementById(`exercise-${targetExerciseId}`);
@@ -223,12 +224,14 @@ export default function Exercises() {
 
     const timeout = window.setTimeout(() => setHighlightedExerciseId(null), 2000);
 
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete("exerciseId");
-    setSearchParams(nextParams, { replace: true });
+    if (!routeExerciseId) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("exerciseId");
+      setSearchParams(nextParams, { replace: true });
+    }
 
     return () => window.clearTimeout(timeout);
-  }, [exercises, searchParams, setSearchParams]);
+  }, [exercises, routeExerciseId, searchParams, setSearchParams]);
 
   return (
     <Layout>
