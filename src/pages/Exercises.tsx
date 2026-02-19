@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { Plus, Pencil, Trash2, Dumbbell, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { MUSCLE_GROUPS } from "@/lib/constants";
 import Layout from "@/components/Layout";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 export default function Exercises() {
   const queryClient = useQueryClient();
@@ -37,20 +39,79 @@ export default function Exercises() {
 
   const quickLogMutation = useMutation({
     mutationFn: async ({ exerciseId, weightKg }: { exerciseId: string; weightKg: number }) => {
-      const { error } = await supabase
-        .from("exercises")
-        .update({ max_weight_kg: weightKg })
-        .eq("id", exerciseId);
+      const { data: session, error: sessionError } = await supabase
+        .from("workout_sessions")
+        .insert({ training_plan_id: null, notes: "Schnelllog aus Übungen" })
+        .select("id")
+        .single();
+      if (sessionError) throw sessionError;
+
+      const { error } = await supabase.from("workout_sets").insert({
+        workout_session_id: session.id,
+        exercise_id: exerciseId,
+        set_number: 1,
+        reps: 1,
+        weight_kg: weightKg,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exercises"] });
+      queryClient.invalidateQueries({ queryKey: ["exercise-bests"] });
+      queryClient.invalidateQueries({ queryKey: ["exercise-progress"] });
+      queryClient.invalidateQueries({ queryKey: ["workout-sessions-calendar"] });
       toast.success("Gewicht gespeichert");
       setSelectedExercise(null);
       setWeightInput("");
     },
     onError: () => toast.error("Fehler beim Speichern des Gewichts"),
   });
+
+  const { data: exerciseBests } = useQuery({
+    queryKey: ["exercise-bests"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("workout_sets").select("exercise_id, weight_kg");
+      if (error) throw error;
+
+      return data.reduce<Record<string, number>>((acc, row) => {
+        const current = acc[row.exercise_id] ?? 0;
+        if (row.weight_kg > current) acc[row.exercise_id] = row.weight_kg;
+        return acc;
+      }, {});
+    },
+  });
+
+  const { data: selectedExerciseProgress } = useQuery({
+    queryKey: ["exercise-progress", selectedExercise?.id],
+    enabled: !!selectedExercise,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("workout_sets")
+        .select("weight_kg, workout_sessions(date)")
+        .eq("exercise_id", selectedExercise!.id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const progressChartData = useMemo(() => {
+    if (!selectedExerciseProgress) return [];
+    const byDate: Record<string, number> = {};
+    selectedExerciseProgress.forEach((row: any) => {
+      const date = row.workout_sessions?.date;
+      if (!date) return;
+      byDate[date] = Math.max(byDate[date] ?? 0, Number(row.weight_kg));
+    });
+
+    return Object.entries(byDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, weight]) => ({
+        date,
+        weight,
+        label: new Date(date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }),
+      }));
+  }, [selectedExerciseProgress]);
 
   const uploadImage = async (file: File): Promise<string> => {
     const ext = file.name.split(".").pop();
@@ -206,7 +267,7 @@ export default function Exercises() {
               <h2 className="text-lg font-semibold mb-3">{group}</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {exs?.map((ex) => {
-                  const bestWeight = Number(ex.max_weight_kg || 0);
+                  const bestWeight = Number(exerciseBests?.[ex.id] ?? ex.max_weight_kg ?? 0);
                   return (
                     <Card
                       key={ex.id}
@@ -272,6 +333,26 @@ export default function Exercises() {
             <Button onClick={saveWeight} disabled={quickLogMutation.isPending} className="w-full">
               {quickLogMutation.isPending ? "Speichern..." : "Gewicht speichern"}
             </Button>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Fortschritt (Bestleistung je Trainingstag)</p>
+              {progressChartData.length ? (
+                <ChartContainer
+                  config={{ weight: { label: "Gewicht", color: "hsl(var(--primary))" } }}
+                  className="h-52 w-full"
+                >
+                  <LineChart data={progressChartData}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                    <YAxis tickLine={false} axisLine={false} width={40} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line type="monotone" dataKey="weight" stroke="var(--color-weight)" strokeWidth={2} dot />
+                  </LineChart>
+                </ChartContainer>
+              ) : (
+                <p className="text-sm text-muted-foreground">Noch keine Daten vorhanden.</p>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
