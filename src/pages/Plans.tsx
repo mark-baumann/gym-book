@@ -306,7 +306,7 @@ export default function Plans() {
                             <GripVertical className="h-4 w-4 text-muted-foreground" />
                             <button
                               type="button"
-                              onClick={() => navigate(`/?exerciseId=${tpe.exercise_id}`)}
+                              onClick={() => navigate(`/exercises/${tpe.exercise_id}`)}
                               className="text-left hover:underline"
                             >
                               {(tpe as any).exercises?.name}

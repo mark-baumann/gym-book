@@ -18,6 +18,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Exercises />} />
+          <Route path="/exercises/:exerciseId" element={<Exercises />} />
           <Route path="/plans" element={<Plans />} />
           <Route path="/calendar" element={<CalendarView />} />
           <Route path="*" element={<NotFound />} />
