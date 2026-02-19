@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,6 @@ import { Plus, Pencil, Trash2, Dumbbell, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { MUSCLE_GROUPS } from "@/lib/constants";
 import Layout from "@/components/Layout";
-
-type ExerciseStats = {
-  bestWeight: number;
-};
 
 export default function Exercises() {
   const queryClient = useQueryClient();
@@ -39,54 +35,16 @@ export default function Exercises() {
     },
   });
 
-  const { data: workoutSets } = useQuery({
-    queryKey: ["exercise-stats"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("workout_sets")
-        .select("exercise_id, weight_kg, reps, workout_session_id, workout_sessions(date)");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const statsByExercise = useMemo(() => {
-    const stats: Record<string, ExerciseStats> = {};
-
-    workoutSets?.forEach((set: any) => {
-      const exerciseId = set.exercise_id;
-      if (!stats[exerciseId]) {
-        stats[exerciseId] = {
-          bestWeight: 0,
-        };
-      }
-
-      stats[exerciseId].bestWeight = Math.max(stats[exerciseId].bestWeight, Number(set.weight_kg || 0));
-    });
-
-    return stats;
-  }, [workoutSets]);
-
   const quickLogMutation = useMutation({
     mutationFn: async ({ exerciseId, weightKg }: { exerciseId: string; weightKg: number }) => {
-      const { data: session, error: sessionError } = await supabase
-        .from("workout_sessions")
-        .insert({ training_plan_id: null })
-        .select("id")
-        .single();
-      if (sessionError) throw sessionError;
-
-      const { error: setError } = await supabase.from("workout_sets").insert({
-        workout_session_id: session.id,
-        exercise_id: exerciseId,
-        set_number: 1,
-        weight_kg: weightKg,
-        reps: 1,
-      });
-      if (setError) throw setError;
+      const { error } = await supabase
+        .from("exercises")
+        .update({ max_weight_kg: weightKg })
+        .eq("id", exerciseId);
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["exercise-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["exercises"] });
       toast.success("Gewicht gespeichert");
       setSelectedExercise(null);
       setWeightInput("");
@@ -248,12 +206,12 @@ export default function Exercises() {
               <h2 className="text-lg font-semibold mb-3">{group}</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {exs?.map((ex) => {
-                  const stats = statsByExercise[ex.id];
+                  const bestWeight = Number(ex.max_weight_kg || 0);
                   return (
                     <Card
                       key={ex.id}
                       className="overflow-hidden cursor-pointer transition-shadow hover:shadow-md"
-                      onClick={() => openWeightDialog(ex.id, ex.name, stats?.bestWeight ?? 0)}
+                      onClick={() => openWeightDialog(ex.id, ex.name, bestWeight)}
                     >
                       {ex.image_url ? (
                         <img src={ex.image_url} alt={ex.name} className="h-40 w-full object-cover" />
@@ -280,7 +238,7 @@ export default function Exercises() {
                         </div>
 
                         <div className="mt-4 rounded-lg bg-muted/60 p-3 text-xs space-y-1">
-                          <p><span className="font-medium">Bestes Gewicht:</span> {stats?.bestWeight ?? 0} kg</p>
+                          <p><span className="font-medium">Bestes Gewicht:</span> {bestWeight} kg</p>
                           <p className="text-muted-foreground">Tippe auf die Karte, um kg zu speichern.</p>
                         </div>
                       </CardContent>

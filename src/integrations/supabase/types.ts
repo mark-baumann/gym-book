@@ -21,6 +21,7 @@ export type Database = {
           id: string
           image_url: string | null
           muscle_group: string
+          max_weight_kg: number
           name: string
         }
         Insert: {
@@ -29,6 +30,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           muscle_group: string
+          max_weight_kg?: number
           name: string
         }
         Update: {
@@ -37,6 +39,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           muscle_group?: string
+          max_weight_kg?: number
           name?: string
         }
         Relationships: []
