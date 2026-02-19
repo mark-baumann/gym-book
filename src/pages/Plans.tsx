@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, ClipboardList, GripVertical, Pencil, CheckCircle2, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
+import { useNavigate } from "react-router-dom";
 
 type PlanFormState = {
   id: string | null;
@@ -26,6 +27,7 @@ const initialFormState: PlanFormState = {
 
 export default function Plans() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [formState, setFormState] = useState<PlanFormState>(initialFormState);
 
@@ -302,7 +304,13 @@ export default function Plans() {
                         .map((tpe) => (
                           <div key={tpe.id} className="flex items-center gap-2 text-sm p-2 bg-muted rounded-lg">
                             <GripVertical className="h-4 w-4 text-muted-foreground" />
-                            <span>{(tpe as any).exercises?.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/?exerciseId=${tpe.exercise_id}`)}
+                              className="text-left hover:underline"
+                            >
+                              {(tpe as any).exercises?.name}
+                            </button>
                             <span className="text-xs text-muted-foreground ml-auto">{(tpe as any).exercises?.muscle_group}</span>
                           </div>
                         ))}
