@@ -1,16 +1,20 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { Flame } from "lucide-react";
-import { format } from "date-fns";
+import { Flame, Trash2 } from "lucide-react";
+import { endOfMonth, format, startOfMonth } from "date-fns";
 import { de } from "date-fns/locale";
 import Layout from "@/components/Layout";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function CalendarView() {
+  const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [visibleMonth, setVisibleMonth] = useState<Date>(new Date());
 
   const { data: sessions } = useQuery({
     queryKey: ["workout-sessions-calendar"],
@@ -29,22 +33,28 @@ export default function CalendarView() {
     return new Set(sessions.map((s) => s.date));
   }, [sessions]);
 
-  const streak = useMemo(() => {
-    if (!sessions?.length) return 0;
-    const sortedDates = [...trainingDates].sort().reverse();
-    let count = 0;
-    const today = format(new Date(), "yyyy-MM-dd");
-    const yesterday = format(new Date(Date.now() - 86400000), "yyyy-MM-dd");
+  const monthlyStreak = useMemo(() => {
+    const monthStart = format(startOfMonth(visibleMonth), "yyyy-MM-dd");
+    const monthEnd = format(endOfMonth(visibleMonth), "yyyy-MM-dd");
+    return [...trainingDates].filter((date) => date >= monthStart && date <= monthEnd).length;
+  }, [trainingDates, visibleMonth]);
 
-    if (sortedDates[0] !== today && sortedDates[0] !== yesterday) return 0;
+  const deleteSessionMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      const { error: setsError } = await supabase.from("workout_sets").delete().eq("workout_session_id", sessionId);
+      if (setsError) throw setsError;
 
-    for (let i = 0; i < sortedDates.length; i++) {
-      const expected = format(new Date(Date.now() - (sortedDates[0] === today ? i : i + 1) * 86400000), "yyyy-MM-dd");
-      if (sortedDates[i] === expected) count++;
-      else break;
-    }
-    return count;
-  }, [sessions, trainingDates]);
+      const { error } = await supabase.from("workout_sessions").delete().eq("id", sessionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workout-sessions-calendar"] });
+      queryClient.invalidateQueries({ queryKey: ["exercise-bests"] });
+      queryClient.invalidateQueries({ queryKey: ["exercise-progress"] });
+      toast.success("Workout gelöscht");
+    },
+    onError: () => toast.error("Workout konnte nicht gelöscht werden"),
+  });
 
   const selectedSessions = useMemo(() => {
     if (!selectedDate || !sessions) return [];
@@ -75,8 +85,8 @@ export default function CalendarView() {
               <Flame className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{streak} {streak === 1 ? "Tag" : "Tage"}</p>
-              <p className="text-sm text-muted-foreground">aktuelle Streak</p>
+              <p className="text-2xl font-bold">{monthlyStreak} {monthlyStreak === 1 ? "Tag" : "Tage"}</p>
+              <p className="text-sm text-muted-foreground">Gym-Tage in {format(visibleMonth, "MMMM yyyy", { locale: de })}</p>
             </div>
           </CardContent>
         </Card>
@@ -87,6 +97,8 @@ export default function CalendarView() {
               mode="single"
               selected={selectedDate}
               onSelect={setSelectedDate}
+              month={visibleMonth}
+              onMonthChange={setVisibleMonth}
               locale={de}
               modifiers={modifiers}
               modifiersStyles={modifiersStyles}
@@ -116,9 +128,20 @@ export default function CalendarView() {
 
                     return (
                       <div key={session.id} className="rounded-lg border p-3">
-                        <p className="text-sm font-medium mb-2">
-                          {(session as any).training_plans?.name || "Freies Training"}
-                        </p>
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <p className="text-sm font-medium">
+                            {(session as any).training_plans?.name || "Freies Training"}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => deleteSessionMutation.mutate(session.id)}
+                            disabled={deleteSessionMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
 
                         {Object.values(byExercise).length ? (
                           <div className="space-y-2">
