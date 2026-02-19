@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,11 @@ import { MUSCLE_GROUPS } from "@/lib/constants";
 import Layout from "@/components/Layout";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { useSearchParams } from "react-router-dom";
 
 export default function Exercises() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -27,6 +29,7 @@ export default function Exercises() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null);
   const [weightInput, setWeightInput] = useState("");
+  const [highlightedExerciseId, setHighlightedExerciseId] = useState<string | null>(null);
 
   const { data: exercises, isLoading } = useQuery({
     queryKey: ["exercises"],
@@ -206,6 +209,27 @@ export default function Exercises() {
     return acc;
   }, {} as Record<string, typeof exercises>);
 
+  useEffect(() => {
+    if (!exercises?.length) return;
+
+    const targetExerciseId = searchParams.get("exerciseId");
+    if (!targetExerciseId) return;
+
+    const targetElement = document.getElementById(`exercise-${targetExerciseId}`);
+    if (!targetElement) return;
+
+    targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightedExerciseId(targetExerciseId);
+
+    const timeout = window.setTimeout(() => setHighlightedExerciseId(null), 2000);
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("exerciseId");
+    setSearchParams(nextParams, { replace: true });
+
+    return () => window.clearTimeout(timeout);
+  }, [exercises, searchParams, setSearchParams]);
+
   return (
     <Layout>
       <div className="flex items-center justify-between mb-6">
@@ -271,7 +295,10 @@ export default function Exercises() {
                   return (
                     <Card
                       key={ex.id}
-                      className="overflow-hidden cursor-pointer transition-shadow hover:shadow-md"
+                      id={`exercise-${ex.id}`}
+                      className={`overflow-hidden cursor-pointer transition-all hover:shadow-md ${
+                        highlightedExerciseId === ex.id ? "ring-2 ring-primary" : ""
+                      }`}
                       onClick={() => openWeightDialog(ex.id, ex.name, bestWeight)}
                     >
                       {ex.image_url ? (
