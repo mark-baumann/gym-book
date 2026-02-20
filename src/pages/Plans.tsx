@@ -181,17 +181,15 @@ export default function Plans() {
 
   const toggleSupplementMutation = useMutation({
     mutationFn: async (supplement: (typeof supplements)[number]["key"]) => {
-      const isTaken = takenSupplements.has(supplement);
+      const existingEntry = todaySupplements?.find((entry) => entry.supplement === supplement);
 
-      if (isTaken) {
-        const { error } = await supabase.from("supplement_intake").delete().eq("date", today).eq("supplement", supplement);
+      if (existingEntry) {
+        const { error } = await supabase.from("supplement_intake").delete().eq("id", existingEntry.id);
         if (error) throw error;
         return { action: "deleted", supplement };
       }
 
-      const { error } = await supabase
-        .from("supplement_intake")
-        .upsert({ supplement, date: today }, { onConflict: "date,supplement", ignoreDuplicates: true });
+      const { error } = await supabase.from("supplement_intake").insert({ supplement, date: today });
       if (error) throw error;
       return { action: "created", supplement };
     },
