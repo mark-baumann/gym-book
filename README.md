@@ -1,73 +1,192 @@
-# Welcome to your Lovable project
+# Gym Book
 
-## Project info
+Eine moderne, mobile-optimierte Web-App zur Verwaltung von Übungen, Trainingsplänen und Trainingstagen.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Gym Book hilft dir dabei, deine Übungen zentral zu pflegen, Tagespläne als erledigt zu markieren und deinen Fortschritt inkl. Bestgewichten im Blick zu behalten.
 
-## How can I edit this code?
+## ✨ Features
 
-There are several ways of editing your application.
+- **Übungsverwaltung**
+  - Übungen anlegen, bearbeiten und löschen
+  - Muskelgruppen zuordnen
+  - Optionales Übungsbild hochladen (Supabase Storage)
+  - Bestes Gewicht je Übung anzeigen
+- **Schnelles Gewicht-Logging**
+  - Direkt aus der Übungskarte ein Gewicht speichern
+  - Fortschritt als Linienchart (Bestleistung pro Trainingstag)
+- **Trainingspläne**
+  - Pläne erstellen, bearbeiten und löschen
+  - Übungen einem Plan zuweisen
+  - Reihenfolge der Übungen im Plan ändern
+  - Plan für „heute“ als erledigt markieren
+- **Kalenderansicht**
+  - Trainingstage im Kalender hervorgehoben
+  - Monatsübersicht mit Anzahl Gym-Tage
+  - Detaillierte Tagesansicht mit aufgezeichneten Sätzen
+  - Sessions direkt aus dem Kalender löschen
+- **Mobile-first UI**
+  - Sticky Header + Bottom Navigation
+  - Klare, reduzierte Oberfläche auf Basis von shadcn/ui + Tailwind
 
-**Use Lovable**
+## 🧱 Tech Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- **Frontend:** React 18, TypeScript, Vite
+- **UI:** Tailwind CSS, shadcn/ui, Radix UI, Lucide Icons
+- **State/Data:** TanStack Query
+- **Backend:** Supabase (Postgres + Storage)
+- **Charts & Datum:** Recharts, date-fns
+- **Tests:** Vitest + Testing Library
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🚀 Schnellstart
 
-**Use your preferred IDE**
+### 1) Voraussetzungen
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Node.js 18+
+- npm
+- Ein Supabase-Projekt
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 2) Repository klonen
 
-Follow these steps:
+```bash
+git clone <DEIN_REPO_URL>
+cd gym-book
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 3) Dependencies installieren
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+```bash
+npm install
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 4) Umgebungsvariablen anlegen
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Erstelle eine `.env` Datei im Projektroot:
+
+```bash
+VITE_SUPABASE_URL=https://<dein-projekt>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<dein-anon-key>
+```
+
+> Die App initialisiert den Supabase-Client über diese beiden Variablen.
+
+### 5) Entwicklungsserver starten
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Standardmäßig läuft die App dann unter `http://localhost:5173`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🗄️ Datenbank & Supabase Setup
 
-**Use GitHub Codespaces**
+Die SQL-Migrationen liegen unter `supabase/migrations/`.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Enthaltene Tabellen
 
-## What technologies are used for this project?
+- `exercises`
+- `training_plans`
+- `training_plan_exercises` (Zuordnung + Reihenfolge)
+- `workout_sessions`
+- `workout_sets`
 
-This project is built with:
+Zusätzlich wird ein öffentlicher Storage-Bucket `exercise-images` angelegt.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Wichtiger Hinweis zur Sicherheit
 
-## How can I deploy this project?
+Die aktuellen Policies erlauben **vollen Zugriff** (FOR ALL USING true) für die relevanten Tabellen und Storage-Objekte.
+Das ist für Prototyping praktisch, für produktive Nutzung solltest du die RLS-Policies mit Auth-Checks absichern.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## 📱 App-Navigation
 
-## Can I connect a custom domain to my Lovable project?
+Die Anwendung besteht aus drei Hauptbereichen:
 
-Yes, you can!
+1. **Übungen (`/`)**
+   - Übungsbibliothek nach Muskelgruppen
+   - Quick-Log und Fortschrittschart
+2. **Pläne (`/plans`)**
+   - Trainingspläne verwalten
+   - Tagesstatus („heute erledigt“) setzen
+3. **Kalender (`/calendar`)**
+   - Trainingshistorie nach Datum
+   - Sessions inkl. Satzdaten anzeigen/löschen
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📂 Projektstruktur (Kurzüberblick)
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```text
+src/
+  components/
+    ui/                 # shadcn/ui Komponenten
+    Layout.tsx          # App-Layout inkl. Bottom-Navigation
+  integrations/
+    supabase/
+      client.ts         # Supabase Client
+      types.ts          # DB-Typen
+  lib/
+    constants.ts        # z. B. Muskelgruppen
+  pages/
+    Exercises.tsx       # Übungen + Quick-Log + Progress Chart
+    Plans.tsx           # Trainingspläne
+    CalendarView.tsx    # Kalender + Tagesdetails
+  test/
+    setup.ts
+```
+
+## 🧪 Verfügbare Scripts
+
+```bash
+npm run dev         # Dev-Server
+npm run build       # Production Build
+npm run build:dev   # Build im Development-Modus
+npm run preview     # Build lokal previewen
+npm run lint        # ESLint
+npm run test        # Vitest (einmalig)
+npm run test:watch  # Vitest Watch Mode
+```
+
+## ✅ Typischer Workflow in der App
+
+1. Übungen anlegen (inkl. Muskelgruppen und optional Bildern)
+2. Trainingsplan erstellen und Übungen in Reihenfolge bringen
+3. Plan an Trainingstagen als erledigt markieren
+4. Gewichte pro Übung direkt per Quick-Log erfassen
+5. Fortschritt über Chart und Kalender verfolgen
+
+## 🌍 Deployment
+
+Da das Projekt ein Vite-Frontend ist, kannst du es z. B. auf folgenden Plattformen deployen:
+
+- Vercel
+- Netlify
+- Cloudflare Pages
+- Eigenes Hosting (statische Dateien aus `dist/`)
+
+Build-Befehl:
+
+```bash
+npm run build
+```
+
+Ausgabeordner: `dist/`
+
+## 🛠️ Verbesserungsideen / Roadmap
+
+- Nutzer-Authentifizierung mit Supabase Auth
+- Nutzerbasierte Datenisolation via RLS
+- Mehrere Sätze/Wiederholungen direkt in der Übungsansicht loggen
+- Erweiterte Statistiken (Volumen, 1RM-Schätzung, Trends)
+- Export/Import (CSV, JSON)
+
+## 🤝 Contributing
+
+Pull Requests und Issues sind willkommen.
+
+Empfohlener Ablauf:
+
+1. Branch erstellen
+2. Änderung implementieren
+3. Lint + Tests ausführen
+4. PR erstellen
+
+## 📄 Lizenz
+
+Aktuell ist keine Lizenzdatei hinterlegt. Falls du das Projekt öffentlich nutzt, ergänze eine passende `LICENSE` (z. B. MIT).
