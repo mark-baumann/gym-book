@@ -28,6 +28,18 @@ export default function CalendarView() {
     },
   });
 
+  const { data: supplementIntake } = useQuery({
+    queryKey: ["supplement-intake-calendar"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("supplement_intake")
+        .select("id, supplement, date")
+        .order("date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const trainingDates = useMemo(() => {
     if (!sessions) return new Set<string>();
     return new Set(sessions.map((s) => s.date));
@@ -61,6 +73,12 @@ export default function CalendarView() {
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     return sessions.filter((s) => s.date === dateStr);
   }, [selectedDate, sessions]);
+
+  const selectedSupplements = useMemo(() => {
+    if (!selectedDate || !supplementIntake) return [];
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    return supplementIntake.filter((entry) => entry.date === dateStr);
+  }, [selectedDate, supplementIntake]);
 
   const modifiers = {
     trained: (date: Date) => trainingDates.has(format(date, "yyyy-MM-dd")),
@@ -166,6 +184,19 @@ export default function CalendarView() {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">Kein Training an diesem Tag</p>
+              )}
+
+              {selectedSupplements.length > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <p className="text-sm font-medium mb-2">Supplemente</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSupplements.map((entry) => (
+                      <Badge key={entry.id} variant="secondary">
+                        {entry.supplement === "creatine" ? "Kreatin" : "Protein"}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>

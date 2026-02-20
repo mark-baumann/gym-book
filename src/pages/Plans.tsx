@@ -195,6 +195,7 @@ export default function Plans() {
     },
     onSuccess: ({ action, supplement }) => {
       queryClient.invalidateQueries({ queryKey: ["supplement-intake", today] });
+      queryClient.invalidateQueries({ queryKey: ["supplement-intake-calendar"] });
       toast.success(`${supplement === "creatine" ? "Kreatin" : "Protein"} ${action === "created" ? "als genommen markiert" : "abgewählt"}`);
     },
     onError: () => toast.error("Supplement-Status konnte nicht gespeichert werden"),
