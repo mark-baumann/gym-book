@@ -44,6 +44,27 @@ export type Database = {
         }
         Relationships: []
       }
+      supplement_intake: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          supplement: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          supplement: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          supplement?: string
+        }
+        Relationships: []
+      }
       training_plan_exercises: {
         Row: {
           exercise_id: string
