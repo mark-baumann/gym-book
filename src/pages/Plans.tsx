@@ -13,6 +13,11 @@ import { toast } from "sonner";
 import Layout from "@/components/Layout";
 import { useNavigate } from "react-router-dom";
 
+const supplements = [
+  { key: "creatine", label: "Kreatin" },
+  { key: "protein", label: "Protein" },
+] as const;
+
 type PlanFormState = {
   id: string | null;
   name: string;
@@ -63,10 +68,21 @@ export default function Plans() {
     },
   });
 
+  const { data: todaySupplements } = useQuery({
+    queryKey: ["supplement-intake", today],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("supplement_intake").select("id, supplement, date").eq("date", today);
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const completedPlanIds = useMemo(
     () => new Set(todaySessions?.map((s) => s.training_plan_id).filter(Boolean)),
     [todaySessions]
   );
+
+  const takenSupplements = useMemo(() => new Set(todaySupplements?.map((entry) => entry.supplement)), [todaySupplements]);
 
   const openCreate = () => {
     setFormState(initialFormState);
@@ -161,6 +177,27 @@ export default function Plans() {
       toast.success(result === "created" ? "Heute als erledigt markiert" : "Markierung für heute entfernt");
     },
     onError: () => toast.error("Status konnte nicht gespeichert werden"),
+  });
+
+  const toggleSupplementMutation = useMutation({
+    mutationFn: async (supplement: (typeof supplements)[number]["key"]) => {
+      const existing = todaySupplements?.find((entry) => entry.supplement === supplement);
+
+      if (existing) {
+        const { error } = await supabase.from("supplement_intake").delete().eq("id", existing.id);
+        if (error) throw error;
+        return { action: "deleted", supplement };
+      }
+
+      const { error } = await supabase.from("supplement_intake").insert({ supplement, date: today });
+      if (error) throw error;
+      return { action: "created", supplement };
+    },
+    onSuccess: ({ action, supplement }) => {
+      queryClient.invalidateQueries({ queryKey: ["supplement-intake", today] });
+      toast.success(`${supplement === "creatine" ? "Kreatin" : "Protein"} ${action === "created" ? "als genommen markiert" : "abgewählt"}`);
+    },
+    onError: () => toast.error("Supplement-Status konnte nicht gespeichert werden"),
   });
 
   const toggleExercise = (id: string) => {
@@ -269,6 +306,30 @@ export default function Plans() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Supplement-Tracking heute</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {supplements.map((supplement) => {
+            const isTaken = takenSupplements.has(supplement.key);
+
+            return (
+              <Button
+                key={supplement.key}
+                className="w-full"
+                variant={isTaken ? "secondary" : "outline"}
+                onClick={() => toggleSupplementMutation.mutate(supplement.key)}
+                disabled={toggleSupplementMutation.isPending}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                {isTaken ? `${supplement.label} genommen ✓` : `${supplement.label} als genommen markieren`}
+              </Button>
+            );
+          })}
+        </CardContent>
+      </Card>
 
       {isLoading ? (
         <p className="text-muted-foreground">Laden...</p>
