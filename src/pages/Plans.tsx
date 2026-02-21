@@ -210,20 +210,26 @@ export default function Plans() {
                 />
               </div>
               <div>
-                <Label>Übungen auswählen</Label>
-                <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
-                  {exercises?.map((exercise) => (
-                    <label key={exercise.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer">
-                      <Checkbox
-                        checked={formState.selectedExercises.includes(exercise.id)}
-                        onCheckedChange={() => toggleExercise(exercise.id)}
-                      />
-                      <span className="text-sm">{exercise.name}</span>
-                      <span className="text-xs text-muted-foreground ml-auto">{exercise.muscle_group}</span>
-                    </label>
-                  ))}
-                  {!exercises?.length && <p className="text-sm text-muted-foreground">Erstelle zuerst Übungen</p>}
-                </div>
+                <Label>{formState.id ? "Übungen im Plan" : "Übungen auswählen"}</Label>
+                {!formState.id ? (
+                  <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
+                    {exercises?.map((exercise) => (
+                      <label key={exercise.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer">
+                        <Checkbox
+                          checked={formState.selectedExercises.includes(exercise.id)}
+                          onCheckedChange={() => toggleExercise(exercise.id)}
+                        />
+                        <span className="text-sm">{exercise.name}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{exercise.muscle_group}</span>
+                      </label>
+                    ))}
+                    {!exercises?.length && <p className="text-sm text-muted-foreground">Erstelle zuerst Übungen</p>}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Übungen können jetzt direkt in der Übungsansicht zu diesem Plan hinzugefügt werden. Hier kannst du nur die Reihenfolge ändern.
+                  </p>
+                )}
               </div>
               {formState.selectedExercises.length > 0 && (
                 <div>
