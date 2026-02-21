@@ -24,8 +24,10 @@ Gym Book hilft dir dabei, deine Übungen zentral zu pflegen, Tagespläne als erl
   - Monatsübersicht mit Anzahl Gym-Tage
   - Detaillierte Tagesansicht mit aufgezeichneten Sätzen
   - Sessions direkt aus dem Kalender löschen
-- **Mobile-first UI**
+- **Mobile-first UI & PWA**
   - Sticky Header + Bottom Navigation
+  - Als installierbare Progressive Web App (PWA) nutzbar
+  - Offline-Basisunterstützung via Service Worker
   - Klare, reduzierte Oberfläche auf Basis von shadcn/ui + Tailwind
 
 ## 🧱 Tech Stack
@@ -189,4 +191,4 @@ Empfohlener Ablauf:
 
 ## 📄 Lizenz
 
-Aktuell ist keine Lizenzdatei hinterlegt. Falls du das Projekt öffentlich nutzt, ergänze eine passende `LICENSE` (z. B. MIT).
+Dieses Projekt steht unter der **GNU General Public License v3.0**. Details findest du in der Datei [`LICENSE`](./LICENSE).
