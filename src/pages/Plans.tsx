@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, ClipboardList, GripVertical, Pencil, CheckCircle2, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
@@ -163,15 +162,6 @@ export default function Plans() {
     onError: () => toast.error("Status konnte nicht gespeichert werden"),
   });
 
-  const toggleExercise = (id: string) => {
-    setFormState((prev) => ({
-      ...prev,
-      selectedExercises: prev.selectedExercises.includes(id)
-        ? prev.selectedExercises.filter((exerciseId) => exerciseId !== id)
-        : [...prev.selectedExercises, id],
-    }));
-  };
-
   const moveExercise = (id: string, direction: "up" | "down") => {
     setFormState((prev) => {
       const currentIndex = prev.selectedExercises.indexOf(id);
@@ -210,26 +200,10 @@ export default function Plans() {
                 />
               </div>
               <div>
-                <Label>{formState.id ? "Übungen im Plan" : "Übungen auswählen"}</Label>
-                {!formState.id ? (
-                  <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
-                    {exercises?.map((exercise) => (
-                      <label key={exercise.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer">
-                        <Checkbox
-                          checked={formState.selectedExercises.includes(exercise.id)}
-                          onCheckedChange={() => toggleExercise(exercise.id)}
-                        />
-                        <span className="text-sm">{exercise.name}</span>
-                        <span className="text-xs text-muted-foreground ml-auto">{exercise.muscle_group}</span>
-                      </label>
-                    ))}
-                    {!exercises?.length && <p className="text-sm text-muted-foreground">Erstelle zuerst Übungen</p>}
-                  </div>
-                ) : (
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Übungen können jetzt direkt in der Übungsansicht zu diesem Plan hinzugefügt werden. Hier kannst du nur die Reihenfolge ändern.
-                  </p>
-                )}
+                <Label>Übungen im Workout</Label>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Übungen fügst du jetzt direkt in der Übungsansicht per Dropdown zu einem Workout hinzu. Hier kannst du nur die Reihenfolge ändern.
+                </p>
               </div>
               {formState.selectedExercises.length > 0 && (
                 <div>
