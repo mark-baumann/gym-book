@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Play, Save } from "lucide-react";
 import { toast } from "sonner";
 import Layout from "@/components/Layout";
@@ -29,15 +28,6 @@ export default function Workout() {
         .from("training_plans")
         .select("*, training_plan_exercises(*, exercises(*))")
         .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: exercises } = useQuery({
-    queryKey: ["exercises"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("exercises").select("*").order("name");
       if (error) throw error;
       return data;
     },
@@ -120,11 +110,6 @@ export default function Workout() {
     onError: () => toast.error("Fehler beim Speichern"),
   });
 
-  const addFreeExercise = (exerciseId: string) => {
-    const ex = exercises?.find((e) => e.id === exerciseId);
-    if (!ex) return;
-    setEntries((prev) => [...prev, { exercise_id: ex.id, exercise_name: ex.name, sets: [{ weight_kg: 0, reps: 0 }] }]);
-  };
 
   return (
     <Layout>
@@ -206,20 +191,6 @@ export default function Workout() {
               </CardContent>
             </Card>
           ))}
-
-          <Card>
-            <CardContent className="p-4">
-              <Label className="text-sm mb-2 block">Übung hinzufügen</Label>
-              <Select onValueChange={addFreeExercise}>
-                <SelectTrigger><SelectValue placeholder="Übung wählen..." /></SelectTrigger>
-                <SelectContent>
-                  {exercises?.filter((e) => !entries.some((en) => en.exercise_id === e.id)).map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
 
           <Button
             onClick={() => saveMutation.mutate()}

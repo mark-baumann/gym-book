@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Dumbbell, ImageIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Dumbbell, ImageIcon, ListPlus } from "lucide-react";
 import { toast } from "sonner";
 import { MUSCLE_GROUPS } from "@/lib/constants";
 import Layout from "@/components/Layout";
@@ -29,6 +29,7 @@ export default function Exercises() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState("");
   const [weightInput, setWeightInput] = useState("");
   const [highlightedExerciseId, setHighlightedExerciseId] = useState<string | null>(null);
 
@@ -36,6 +37,18 @@ export default function Exercises() {
     queryKey: ["exercises"],
     queryFn: async () => {
       const { data, error } = await supabase.from("exercises").select("*").order("muscle_group").order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: plans } = useQuery({
+    queryKey: ["training-plans"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("training_plans")
+        .select("id, name, training_plan_exercises(sort_order, exercise_id)")
+        .order("name");
       if (error) throw error;
       return data;
     },
@@ -69,6 +82,40 @@ export default function Exercises() {
       setWeightInput("");
     },
     onError: () => toast.error("Fehler beim Speichern des Gewichts"),
+  });
+
+  const addToPlanMutation = useMutation({
+    mutationFn: async ({ exerciseId, planId }: { exerciseId: string; planId: string }) => {
+      const targetPlan = plans?.find((plan) => plan.id === planId);
+      if (!targetPlan) throw new Error("Plan nicht gefunden");
+
+      const alreadyInPlan = targetPlan.training_plan_exercises?.some((entry) => entry.exercise_id === exerciseId);
+      if (alreadyInPlan) throw new Error("already_in_plan");
+
+      const nextSortOrder = (targetPlan.training_plan_exercises || []).reduce(
+        (max, entry) => Math.max(max, entry.sort_order),
+        -1
+      ) + 1;
+
+      const { error } = await supabase.from("training_plan_exercises").insert({
+        training_plan_id: planId,
+        exercise_id: exerciseId,
+        sort_order: nextSortOrder,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["training-plans"] });
+      toast.success("Übung zum Plan hinzugefügt");
+      setSelectedPlanId("");
+    },
+    onError: (error: Error) => {
+      if (error.message === "already_in_plan") {
+        toast.error("Diese Übung ist im Plan bereits enthalten");
+        return;
+      }
+      toast.error("Übung konnte nicht zum Plan hinzugefügt werden");
+    },
   });
 
   const { data: exerciseBests } = useQuery({
@@ -192,6 +239,7 @@ export default function Exercises() {
   const openWeightDialog = (exerciseId: string, exerciseName: string, bestWeight: number) => {
     setSelectedExercise({ id: exerciseId, name: exerciseName });
     setWeightInput(bestWeight > 0 ? String(bestWeight) : "");
+    setSelectedPlanId("");
   };
 
   const saveWeight = () => {
@@ -363,6 +411,35 @@ export default function Exercises() {
             <Button onClick={saveWeight} disabled={quickLogMutation.isPending} className="w-full">
               {quickLogMutation.isPending ? "Speichern..." : "Gewicht speichern"}
             </Button>
+
+            <div className="space-y-2">
+              <Label>Zu Trainingsplan hinzufügen</Label>
+              <div className="flex gap-2">
+                <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Plan wählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans?.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (!selectedExercise || !selectedPlanId) return;
+                    addToPlanMutation.mutate({ exerciseId: selectedExercise.id, planId: selectedPlanId });
+                  }}
+                  disabled={!selectedExercise || !selectedPlanId || addToPlanMutation.isPending}
+                >
+                  <ListPlus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
 
             <div className="space-y-2">
               <p className="text-sm font-medium">Fortschritt (Bestleistung je Trainingstag)</p>
