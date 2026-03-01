@@ -1,4 +1,4 @@
-const CACHE_NAME = "gym-book-cache-v1";
+const CACHE_NAME = "gym-book-cache-v3";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/favicon.svg", "/robots.txt"];
 
 self.addEventListener("install", (event) => {
