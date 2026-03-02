@@ -11,33 +11,21 @@
   "lang": "de",
   "icons": [
     {
-      "src": "https://upload.wikimedia.org/wikipedia/commons/a/ae/Btoteva_fitness.svg",
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Font_Awesome_5_solid_dumbbell.svg/512px-Font_Awesome_5_solid_dumbbell.svg.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://upload.wikimedia.org/wikipedia/commons/a/ae/Btoteva_fitness.svg",
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Font_Awesome_5_solid_dumbbell.svg/512px-Font_Awesome_5_solid_dumbbell.svg.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://upload.wikimedia.org/wikipedia/commons/a/ae/Btoteva_fitness.svg",
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Font_Awesome_5_solid_dumbbell.svg/512px-Font_Awesome_5_solid_dumbbell.svg.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
       "purpose": "maskable"
     }
   ]
