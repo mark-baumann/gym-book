@@ -1,5 +1,5 @@
 const CACHE_NAME = "gym-book-cache-v1";
-const APP_SHELL = ["/", "/manifest.webmanifest", "/favicon.svg", "/robots.txt"];
+const APP_SHELL = ["/", "/manifest.webmanifest", "/app-icon.svg", "/robots.txt"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

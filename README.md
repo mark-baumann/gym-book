@@ -13,6 +13,11 @@ Die Anwendung ist als PWA vorbereitet und kann auf unterstützten Geräten insta
 - Automatische Service-Worker-Registrierung beim App-Start (`src/main.tsx`)
 - PWA-Metadaten in `index.html`
 
+### App-Icon
+
+- Neues plattformübergreifendes SVG-App-Icon: [`/public/app-icon.svg`](./public/app-icon.svg)
+- Direkter Pfad in der App: [`/app-icon.svg`](/app-icon.svg)
+
 ## Voraussetzungen
 
 - Node.js 18+
